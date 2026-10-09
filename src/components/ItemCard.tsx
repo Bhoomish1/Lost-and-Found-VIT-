@@ -11,6 +11,7 @@ import {
   MessageSquare,
   HelpCircle,
   Eye,
+  Camera,
 } from 'lucide-react';
 
 interface ItemCardProps {
@@ -79,6 +80,24 @@ export const ItemCard: React.FC<ItemCardProps> = ({
             </span>
           )}
         </div>
+
+        {/* Item Photo if uploaded */}
+        {item.imageUrl && (
+          <div
+            onClick={() => onOpenDetails(item)}
+            className="relative w-full h-44 bg-[#f1f3f4] overflow-hidden cursor-pointer group/img border-b border-[#f1f3f4]"
+          >
+            <img
+              src={item.imageUrl}
+              alt={item.title}
+              className="w-full h-full object-cover group-hover/img:scale-103 transition-transform duration-200"
+            />
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/60 text-white backdrop-blur-xs flex items-center gap-1">
+              <Camera className="w-3 h-3" />
+              <span>Photo</span>
+            </div>
+          </div>
+        )}
 
         {/* Card Content */}
         <div className="p-4 space-y-3">

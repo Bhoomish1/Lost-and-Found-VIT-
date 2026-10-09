@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenHandoff }) => {
                     <span className="hidden md:inline text-[#dadce0]">·</span>
                     <span className="hidden md:flex items-center gap-1 font-mono text-[#006e2c] bg-[#e6f4ea] px-1.5 py-0.2 rounded text-[10px]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#34a853] animate-pulse" />
-                      Live: {liveClock}
+                      Time: {liveClock}
                     </span>
                   </div>
                 </div>

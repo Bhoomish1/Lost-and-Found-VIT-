@@ -46,6 +46,7 @@ export interface ClaimVerification {
   claimantRegMasked: string;
   challengeAnswer: string;
   additionalProofNote?: string;
+  proofImageUrl?: string; // photo proof of ownership (bill, invoice, wallpaper, previous photo)
   submittedAt: string;
   status: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
@@ -58,6 +59,11 @@ export interface HandoffMessage {
   senderRole: 'finder' | 'claimant' | 'system';
   senderMaskedName: string;
   text: string;
+  imageUrl?: string; // photo sent in chat
+  audioUrl?: string; // voice message audio data URL
+  audioDuration?: number; // duration in seconds
+  edited?: boolean; // whether message was edited
+  deletedForUserIds?: string[]; // IDs of users who deleted this message for themselves
   timestamp: string;
 }
 
@@ -80,6 +86,7 @@ export interface LostFoundItem {
   specificLocation: string; // e.g. "SJT 4th floor lab hallway, near water cooler"
   dateTime: string; // e.g. "2026-10-07 14:30"
   description: string;
+  imageUrl?: string; // photo of the item (from camera or gallery)
   status: ItemStatus;
 
   // Custom ownership verification challenge created by reporter/finder

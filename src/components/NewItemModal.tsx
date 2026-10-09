@@ -23,7 +23,11 @@ import {
   Lock,
   Building2,
   AlertCircle,
+  Camera,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react';
+import { CameraModal } from './CameraModal';
 
 interface NewItemModalProps {
   initialType?: ItemType;
@@ -44,9 +48,32 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
   const [specificLocation, setSpecificLocation] = useState('');
   const [dateTime, setDateTime] = useState('Today, ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [challengeQuestion, setChallengeQuestion] = useState('');
   const [challengeHint, setChallengeHint] = useState('');
   const [error, setError] = useState('');
+
+  const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleGalleryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image file is too large (max 5MB).');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          setImageUrl(result);
+          setError('');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleZoneChange = (zone: VenueZone) => {
     setVenueZone(zone);
@@ -101,6 +128,7 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
       specificLocation: specificLocation.trim(),
       dateTime: dateTime.trim(),
       description: description.trim() || 'Reported on VIT campus meridian portal.',
+      imageUrl: imageUrl || undefined,
       verificationChallenge: {
         question: challengeQuestion.trim(),
         hint: challengeHint.trim() || undefined,
@@ -260,6 +288,86 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
             />
           </div>
 
+          {/* Photo Upload: Gallery or Camera */}
+          <div className="p-3.5 bg-[#faf9fd] border border-[#dadce0] rounded-xl space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#1a1b1e] flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-[#1a73e8]" />
+                <span>Upload Item Photo</span>
+                <span className="text-[10px] font-normal text-[#5f6368]">(Recommended)</span>
+              </label>
+              {imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setImageUrl('')}
+                  className="text-[11px] font-semibold text-[#ba1a1a] hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Remove Photo</span>
+                </button>
+              )}
+            </div>
+
+            <p className="text-[11px] text-[#5f6368] leading-relaxed">
+              Attach a clear picture of the {type === 'found' ? 'found' : 'lost'} item. You can import from your device gallery or capture live with your camera.
+            </p>
+
+            {imageUrl ? (
+              <div className="relative rounded-lg overflow-hidden border border-[#dadce0] bg-black/5 max-h-48 flex items-center justify-center group">
+                <img
+                  src={imageUrl}
+                  alt="Item preview"
+                  className="w-full h-44 object-cover sm:object-contain rounded-lg"
+                />
+                <div className="absolute bottom-2 right-2 flex gap-1.5 bg-black/60 backdrop-blur-xs p-1 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="px-2 py-1 text-[10px] font-semibold text-white bg-white/20 hover:bg-white/30 rounded cursor-pointer"
+                  >
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    className="px-2 py-1 text-[10px] font-semibold text-white bg-white/20 hover:bg-white/30 rounded cursor-pointer"
+                  >
+                    Retake
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="flex flex-col sm:flex-row items-center justify-center gap-1.5 p-3 rounded-lg border-2 border-dashed border-[#dadce0] hover:border-[#1a73e8] bg-white hover:bg-[#e8f0fe]/30 text-xs font-semibold text-[#414754] hover:text-[#1a73e8] transition-all cursor-pointer"
+                >
+                  <ImageIcon className="w-4 h-4 text-[#1a73e8]" />
+                  <span>Upload from Gallery</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCameraOpen(true)}
+                  className="flex flex-col sm:flex-row items-center justify-center gap-1.5 p-3 rounded-lg border-2 border-dashed border-[#dadce0] hover:border-[#006e2c] bg-white hover:bg-[#e6f4ea]/30 text-xs font-semibold text-[#414754] hover:text-[#006e2c] transition-all cursor-pointer"
+                >
+                  <Camera className="w-4 h-4 text-[#006e2c]" />
+                  <span>Access Camera</span>
+                </button>
+              </div>
+            )}
+
+            {/* Hidden file input for gallery */}
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleGalleryFileSelect}
+              className="hidden"
+            />
+          </div>
+
           {/* Secret Question */}
           <div className="p-3.5 bg-[#e8f0fe]/70 border border-[#c1c6d6] rounded-xl space-y-2">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#1a73e8]">
@@ -326,6 +434,17 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* In-Browser Live Camera Capture Modal */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={(capturedDataUrl) => {
+          setImageUrl(capturedDataUrl);
+          setError('');
+        }}
+        title={`Take Photo of ${type === 'found' ? 'Found' : 'Lost'} Item`}
+      />
     </div>
   );
 };

@@ -12,6 +12,7 @@ import {
   Building2,
   HelpCircle,
   MessageSquare,
+  Camera,
 } from 'lucide-react';
 
 interface ItemDetailModalProps {
@@ -84,6 +85,23 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Item Photo if uploaded */}
+          {item.imageUrl && (
+            <div className="rounded-xl overflow-hidden border border-[#dadce0] bg-[#f8f9fa] shadow-xs">
+              <div className="relative max-h-72 flex items-center justify-center bg-black/5">
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="w-full max-h-72 object-contain"
+                />
+                <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-black/60 text-white backdrop-blur-xs flex items-center gap-1.5 shadow-sm">
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Item Photo</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div>
@@ -176,7 +194,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                   className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-[#006e2c] hover:bg-[#005320] rounded-lg shadow-sm cursor-pointer"
                 >
                   <MessageSquare className="w-4 h-4" />
-                  <span>Open Live Chat</span>
+                  <span>Open Chat</span>
                 </button>
               )}
               <button

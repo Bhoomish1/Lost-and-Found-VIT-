@@ -280,7 +280,7 @@ export const MyActivityView: React.FC<MyActivityViewProps> = ({
                       className="flex-1 py-2 bg-[#006e2c] hover:bg-[#005320] text-white font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Open Live Chat</span>
+                      <span>Open Chat</span>
                     </button>
                     {isFinder && item.claims.length > 0 && (
                       <button

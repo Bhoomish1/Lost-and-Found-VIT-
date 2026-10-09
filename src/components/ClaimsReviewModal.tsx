@@ -11,7 +11,9 @@ import {
   HelpCircle,
   CheckCircle2,
   Send,
+  Camera,
 } from 'lucide-react';
+import { VoiceAudioPlayer } from './VoiceAudioPlayer';
 
 interface ClaimsReviewModalProps {
   item: LostFoundItem;
@@ -125,7 +127,7 @@ export const ClaimsReviewModal: React.FC<ClaimsReviewModalProps> = ({
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>Live Chat Room ({messages.length})</span>
+              <span>Chat Room ({messages.length})</span>
             </button>
           </div>
         )}
@@ -235,7 +237,31 @@ export const ClaimsReviewModal: React.FC<ClaimsReviewModalProps> = ({
                             : 'bg-[#f1f3f4] text-[#1a1b1e] rounded-tl-xs border border-[#e3e2e6]'
                         }`}
                       >
-                        <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        {/* Attached Image */}
+                        {msg.imageUrl && (
+                          <div className="mb-2 rounded-xl overflow-hidden border border-black/10 bg-black/5">
+                            <img
+                              src={msg.imageUrl}
+                              alt="Chat attachment"
+                              className="w-full max-h-48 object-contain rounded-lg"
+                            />
+                          </div>
+                        )}
+
+                        {/* Voice Message */}
+                        {msg.audioUrl && (
+                          <div className="mb-1.5">
+                            <VoiceAudioPlayer
+                              audioUrl={msg.audioUrl}
+                              duration={msg.audioDuration}
+                              isMine={isMine}
+                            />
+                          </div>
+                        )}
+
+                        {msg.text && (
+                          <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                        )}
                         <div
                           className={`mt-1.5 pt-1 text-[10px] font-mono flex items-center gap-1 ${
                             isMine
@@ -244,7 +270,7 @@ export const ClaimsReviewModal: React.FC<ClaimsReviewModalProps> = ({
                           }`}
                         >
                           <Clock className="w-2.5 h-2.5" />
-                          <span>Time: {msg.timestamp}</span>
+                          <span>{msg.timestamp}</span>
                         </div>
                       </div>
                     </div>
@@ -320,6 +346,22 @@ export const ClaimsReviewModal: React.FC<ClaimsReviewModalProps> = ({
                         <div className="pt-1.5 border-t border-[#efedf1] text-xs text-[#5f6368]">
                           <span className="font-semibold text-[#414754]">Note: </span>
                           {claim.additionalProofNote}
+                        </div>
+                      )}
+
+                      {claim.proofImageUrl && (
+                        <div className="pt-2 border-t border-[#efedf1] space-y-1">
+                          <div className="text-[11px] font-bold text-[#1a73e8] uppercase flex items-center gap-1">
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Attached Proof Photo:</span>
+                          </div>
+                          <div className="rounded-lg overflow-hidden border border-[#dadce0] bg-black/5 max-h-48 flex items-center justify-center">
+                            <img
+                              src={claim.proofImageUrl}
+                              alt="Ownership proof photo"
+                              className="w-full max-h-48 object-contain"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>

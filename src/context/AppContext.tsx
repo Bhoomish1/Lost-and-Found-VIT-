@@ -36,10 +36,27 @@ interface AppContextType {
   setSelectedVenueZone: (zone: VenueZone | 'all') => void;
 
   reportNewItem: (itemData: Omit<LostFoundItem, 'id' | 'claims' | 'status' | 'reporter'>) => string;
-  submitClaim: (itemId: string, challengeAnswer: string, additionalProofNote?: string) => void;
+  submitClaim: (itemId: string, challengeAnswer: string, additionalProofNote?: string, proofImageUrl?: string) => void;
   approveClaim: (itemId: string, claimId: string) => void;
   rejectClaim: (itemId: string, claimId: string, reason: string) => void;
-  sendHandoffMessage: (itemId: string, text: string) => void;
+  sendHandoffMessage: (
+    itemId: string,
+    text: string,
+    attachments?: { imageUrl?: string; audioUrl?: string; audioDuration?: number }
+  ) => void;
+  deleteHandoffMessage: (
+    itemId: string,
+    messageId: string,
+    deleteScope?: 'for_me' | 'for_everyone',
+    userId?: string
+  ) => void;
+  deleteMultipleHandoffMessages: (
+    itemId: string,
+    messageIds: string[],
+    deleteScope?: 'for_me' | 'for_everyone',
+    userId?: string
+  ) => void;
+  editHandoffMessage: (itemId: string, messageId: string, newText: string) => void;
   setHandoffCheckpoint: (itemId: string, checkpointId: string, timeSlot: string) => void;
   markResolved: (itemId: string) => void;
   resetDemoData: () => void;
@@ -58,9 +75,9 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_ITEMS_KEY = 'vit_lost_found_items_v8';
-const LOCAL_STORAGE_USER_KEY = 'vit_lost_found_user_v8';
-const LOCAL_STORAGE_NOTIFS_KEY = 'vit_lost_found_notifs_v8';
+const LOCAL_STORAGE_ITEMS_KEY = 'vit_lost_found_items_v12';
+const LOCAL_STORAGE_USER_KEY = 'vit_lost_found_user_v12';
+const LOCAL_STORAGE_NOTIFS_KEY = 'vit_lost_found_notifs_v12';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [allStudents] = useState<StudentProfile[]>(MOCK_STUDENTS);
@@ -85,7 +102,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem(LOCAL_STORAGE_ITEMS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Clean out any unwanted stock photos from prior sessions
+          return parsed.map((item: LostFoundItem) => {
+            if (item.imageUrl && !item.imageUrl.startsWith('data:image/')) {
+              const { imageUrl, ...rest } = item;
+              return rest as LostFoundItem;
+            }
+            return item;
+          });
+        }
       }
     } catch {
       // fallback
@@ -232,7 +258,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newItemId;
   };
 
-  const submitClaim = (itemId: string, challengeAnswer: string, additionalProofNote?: string) => {
+  const submitClaim = (
+    itemId: string,
+    challengeAnswer: string,
+    additionalProofNote?: string,
+    proofImageUrl?: string
+  ) => {
     const liveTime = getCurrentLiveTimeString();
 
     const newClaim: ClaimVerification = {
@@ -243,6 +274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       claimantRegMasked: maskRegNumber(currentUser.regNumber),
       challengeAnswer,
       additionalProofNote,
+      proofImageUrl,
       submittedAt: liveTime,
       status: 'pending',
     };
@@ -269,6 +301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             text: `Hi! I answered your verification question: "${challengeAnswer}". ${
               additionalProofNote ? `Note: ${additionalProofNote}` : ''
             }`,
+            imageUrl: proofImageUrl,
             timestamp: liveTime,
           };
 
@@ -442,8 +475,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const sendHandoffMessage = (itemId: string, text: string) => {
-    if (!text.trim()) return;
+  const sendHandoffMessage = (
+    itemId: string,
+    text: string,
+    attachments?: { imageUrl?: string; audioUrl?: string; audioDuration?: number }
+  ) => {
+    if (!text.trim() && !attachments?.imageUrl && !attachments?.audioUrl) return;
     const liveTime = getCurrentLiveTimeString();
 
     let targetItemTitle = '';
@@ -472,12 +509,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             recipientName = item.reporter.fullName;
           }
 
+          const fallbackText = attachments?.audioUrl
+            ? `🎤 Voice message (${Math.round(attachments.audioDuration || 0)}s)`
+            : attachments?.imageUrl
+            ? '📷 Photo attached'
+            : '';
+
           const newMessage: HandoffMessage = {
             id: `msg-${Date.now()}`,
             senderId: currentUser.id,
             senderRole: isFinder ? 'finder' : 'claimant',
             senderMaskedName: `${currentUser.name.split(' ')[0]} (${isFinder ? 'Finder' : 'Claimant'})`,
-            text: text.trim(),
+            text: text.trim() || fallbackText,
+            imageUrl: attachments?.imageUrl,
+            audioUrl: attachments?.audioUrl,
+            audioDuration: attachments?.audioDuration,
             timestamp: liveTime,
           };
 
@@ -504,17 +550,130 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // DISPATCH NOTIFICATION TO RECIPIENT
     if (recipientStudentId) {
       const isFinder = items.find((i) => i.id === itemId)?.reporter.studentId === currentUser.id;
+      const notifSnippet =
+        text.trim() ||
+        (attachments?.audioUrl
+          ? 'Sent a voice message'
+          : attachments?.imageUrl
+          ? 'Shared a photo'
+          : 'New message');
+
       triggerNotification({
         recipientId: recipientStudentId,
         recipientName: recipientName,
         senderName: `${currentUser.name.split(' ')[0]} (${isFinder ? 'Finder' : 'Claimant'})`,
         title: `New Message on ${targetItemTitle}`,
-        message: text.trim(),
+        message: notifSnippet,
         itemId,
         itemTitle: targetItemTitle,
         type: 'chat_message',
       });
     }
+  };
+
+  const deleteHandoffMessage = (
+    itemId: string,
+    messageId: string,
+    deleteScope: 'for_me' | 'for_everyone' = 'for_everyone',
+    userId?: string
+  ) => {
+    const targetUserId = userId || currentUser.id;
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId && item.handoffDetails) {
+          if (deleteScope === 'for_me') {
+            return {
+              ...item,
+              handoffDetails: {
+                ...item.handoffDetails,
+                messages: item.handoffDetails.messages.map((m) => {
+                  if (m.id === messageId) {
+                    const currentDeletedFor = m.deletedForUserIds || [];
+                    if (!currentDeletedFor.includes(targetUserId)) {
+                      return { ...m, deletedForUserIds: [...currentDeletedFor, targetUserId] };
+                    }
+                  }
+                  return m;
+                }),
+              },
+            };
+          } else {
+            // Delete for everyone
+            return {
+              ...item,
+              handoffDetails: {
+                ...item.handoffDetails,
+                messages: item.handoffDetails.messages.filter((m) => m.id !== messageId),
+              },
+            };
+          }
+        }
+        return item;
+      })
+    );
+  };
+
+  const deleteMultipleHandoffMessages = (
+    itemId: string,
+    messageIds: string[],
+    deleteScope: 'for_me' | 'for_everyone' = 'for_everyone',
+    userId?: string
+  ) => {
+    const idSet = new Set(messageIds);
+    const targetUserId = userId || currentUser.id;
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId && item.handoffDetails) {
+          if (deleteScope === 'for_me') {
+            return {
+              ...item,
+              handoffDetails: {
+                ...item.handoffDetails,
+                messages: item.handoffDetails.messages.map((m) => {
+                  if (idSet.has(m.id)) {
+                    const currentDeletedFor = m.deletedForUserIds || [];
+                    if (!currentDeletedFor.includes(targetUserId)) {
+                      return { ...m, deletedForUserIds: [...currentDeletedFor, targetUserId] };
+                    }
+                  }
+                  return m;
+                }),
+              },
+            };
+          } else {
+            // Delete for everyone
+            return {
+              ...item,
+              handoffDetails: {
+                ...item.handoffDetails,
+                messages: item.handoffDetails.messages.filter((m) => !idSet.has(m.id)),
+              },
+            };
+          }
+        }
+        return item;
+      })
+    );
+  };
+
+  const editHandoffMessage = (itemId: string, messageId: string, newText: string) => {
+    if (!newText.trim()) return;
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId && item.handoffDetails) {
+          return {
+            ...item,
+            handoffDetails: {
+              ...item.handoffDetails,
+              messages: item.handoffDetails.messages.map((m) =>
+                m.id === messageId ? { ...m, text: newText.trim(), edited: true } : m
+              ),
+            },
+          };
+        }
+        return item;
+      })
+    );
   };
 
   const setHandoffCheckpoint = (itemId: string, checkpointId: string, timeSlot: string) => {
@@ -692,6 +851,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approveClaim,
         rejectClaim,
         sendHandoffMessage,
+        deleteHandoffMessage,
+        deleteMultipleHandoffMessages,
+        editHandoffMessage,
         setHandoffCheckpoint,
         markResolved,
         resetDemoData,

@@ -1,6 +1,9 @@
 {
   "name": "VIT Campus Lost & Found",
   "description": "Official VIT campus lost and found portal with privacy-preserving student claims, verification challenges, and safe checkpoint handoff coordination.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
